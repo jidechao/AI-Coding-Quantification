@@ -1,0 +1,40 @@
+authorship:
+  mode: auto
+  default_tool: cursor
+  default_model: none
+
+heuristic:
+  weights:
+    commit_message_keywords: 0.4
+    diff_volume: 0.3
+    stylometry: 0.3
+  thresholds:
+    ai_authored: 0.7
+    ai_assisted: 0.3
+  diff_volume:
+    small_lines: 30
+    large_lines: 200
+  keyword_markers:
+    - ai
+    - agent
+    - cursor
+    - copilot
+    - claude
+    - generated
+    - draft
+
+audit:
+  enabled: true
+  sample_rate: 0.1
+  minimum_samples_per_week: 10
+
+gitlab:
+  url: https://gitlab.example.com
+  project_id: ""
+
+database:
+  host: 127.0.0.1
+  port: 3306
+  name: ai_metrics
+  user: ai_metrics
+  password: ai_metrics

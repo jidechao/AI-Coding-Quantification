@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+MSG_FILE="$1"
+HOOK_DIR="$(cd "$(dirname "$0")" && pwd)"
+LIB_DIR="${HOOK_DIR}/ai-metrics-lib"
+
+if [[ ! -d "${LIB_DIR}" ]]; then
+  LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/lib" && pwd)"
+fi
+
+source "${LIB_DIR}/trailer.sh"
+
+defaults="$(PYTHONPATH="${LIB_DIR}" python - <<'PY'
+from config import load_config, trailer_defaults
+
+d = trailer_defaults(load_config())
+print("\n".join([
+    d.authorship,
+    d.tool,
+    d.model,
+    str(d.ratio),
+    d.mode,
+    d.audit_status,
+]))
+PY
+)"
+
+mapfile -t values <<< "${defaults}"
+
+if ! grep -qE '^AI-Authorship:' "${MSG_FILE}"; then
+  printf "\n" >> "${MSG_FILE}"
+fi
+
+append_missing_trailer "${MSG_FILE}" "AI-Authorship" "${values[0]}"
+append_missing_trailer "${MSG_FILE}" "AI-Tool" "${values[1]}"
+append_missing_trailer "${MSG_FILE}" "AI-Model" "${values[2]}"
+append_missing_trailer "${MSG_FILE}" "Human-Edit-Ratio" "${values[3]}"
+append_missing_trailer "${MSG_FILE}" "AI-Mode" "${values[4]}"
+append_missing_trailer "${MSG_FILE}" "Audit-Status" "${values[5]}"

@@ -1,0 +1,28 @@
+stages:
+  - ai_metrics
+
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  AI_AUDIT_SAMPLE_RATE: "0.1"
+
+ai_metrics:label:
+  stage: ai_metrics
+  image: python:3.12-slim
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+  before_script:
+    - pip install requests
+    - git fetch origin "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"
+  script:
+    - python ci/parse_trailers.py --base-ref "origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME" --head-ref "$CI_COMMIT_SHA"
+    - python ci/audit_sampler.py --output audit-decision.json --queue-output audit-queue.json
+    - |
+      if [ -n "$MYSQL_HOST" ]; then
+        python ci/etl/load_mysql.py --table audit_queue --input audit-queue.json
+      fi
+  artifacts:
+    when: always
+    paths:
+      - audit-decision.json
+      - audit-queue.json
+    expire_in: 30 days

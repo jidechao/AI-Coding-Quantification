@@ -1,0 +1,91 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+MSG_FILE="$1"
+HOOK_DIR="$(cd "$(dirname "$0")" && pwd)"
+LIB_DIR="${HOOK_DIR}/ai-metrics-lib"
+
+if [[ ! -d "${LIB_DIR}" ]]; then
+  LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/lib" && pwd)"
+fi
+
+source "${LIB_DIR}/trailer.sh"
+
+mode="$(PYTHONPATH="${LIB_DIR}" python - <<'PY'
+from config import load_config
+print(load_config()["authorship"].get("mode", "auto"))
+PY
+)"
+
+apply_choice() {
+  local choice="$1"
+  case "${choice}" in
+    ai-authored)
+      replace_or_append_trailer "${MSG_FILE}" "AI-Authorship" "ai-authored"
+      replace_or_append_trailer "${MSG_FILE}" "AI-Tool" "${AI_METRICS_TOOL:-cursor}"
+      replace_or_append_trailer "${MSG_FILE}" "AI-Model" "${AI_METRICS_MODEL:-none}"
+      replace_or_append_trailer "${MSG_FILE}" "Human-Edit-Ratio" "${AI_METRICS_RATIO:-20}"
+      ;;
+    ai-assisted)
+      replace_or_append_trailer "${MSG_FILE}" "AI-Authorship" "ai-assisted"
+      replace_or_append_trailer "${MSG_FILE}" "AI-Tool" "${AI_METRICS_TOOL:-cursor}"
+      replace_or_append_trailer "${MSG_FILE}" "AI-Model" "${AI_METRICS_MODEL:-none}"
+      replace_or_append_trailer "${MSG_FILE}" "Human-Edit-Ratio" "${AI_METRICS_RATIO:-50}"
+      ;;
+    human)
+      replace_or_append_trailer "${MSG_FILE}" "AI-Authorship" "human"
+      replace_or_append_trailer "${MSG_FILE}" "AI-Tool" "none"
+      replace_or_append_trailer "${MSG_FILE}" "AI-Model" "none"
+      replace_or_append_trailer "${MSG_FILE}" "Human-Edit-Ratio" "${AI_METRICS_RATIO:-100}"
+      ;;
+    *)
+      echo "[ai-metrics] invalid AI_METRICS_CHOICE: ${choice}" >&2
+      exit 1
+      ;;
+  esac
+  replace_or_append_trailer "${MSG_FILE}" "AI-Mode" "${mode}"
+  replace_or_append_trailer "${MSG_FILE}" "Audit-Status" "pending"
+}
+
+if [[ "${mode}" == "manual" ]]; then
+  if [[ -n "${AI_METRICS_CHOICE:-}" ]]; then
+    apply_choice "${AI_METRICS_CHOICE}"
+  elif grep -qE '^AI-Authorship:[[:space:]]*choose[[:space:]]*$' "${MSG_FILE}"; then
+    if [[ -t 0 ]]; then
+      echo "[ai-metrics] choose AI authorship: 1) ai-authored 2) ai-assisted 3) human" >&2
+      read -r -p "Choice [1/2/3]: " choice
+      case "${choice}" in
+        1) apply_choice "ai-authored" ;;
+        2) apply_choice "ai-assisted" ;;
+        3) apply_choice "human" ;;
+        *) echo "[ai-metrics] invalid choice" >&2; exit 1 ;;
+      esac
+    else
+      cat >&2 <<'EOF'
+[ai-metrics] manual mode requires an authorship choice.
+Set AI_METRICS_CHOICE=ai-authored|ai-assisted|human or edit the trailers in the commit message.
+EOF
+      exit 1
+    fi
+  fi
+fi
+
+if validate_required_trailers "${MSG_FILE}"; then
+  exit 0
+fi
+
+cat >&2 <<'EOF'
+[ai-metrics] invalid or missing AI Coding trailers.
+
+Required format:
+  AI-Authorship: ai-authored | ai-assisted | human
+  AI-Tool: cursor | copilot | claude-code | none
+  AI-Model: <model-or-none>
+  Human-Edit-Ratio: 0-100
+  AI-Mode: auto | manual | hybrid
+  Audit-Status: pending | passed | failed
+
+See docs/01-team-alignment.md for the team definition.
+EOF
+
+exit 1

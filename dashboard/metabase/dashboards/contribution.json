@@ -1,0 +1,24 @@
+{
+  "name": "AI Coding Contribution",
+  "description": "贡献度：AI 行数占比、加权贡献、人工/AI 分布。",
+  "cards": [
+    {
+      "name": "AI Weighted Contribution %",
+      "visualization": "line",
+      "query_file": "sql/queries/contribution.sql",
+      "metric": "ai_weighted_contribution_pct"
+    },
+    {
+      "name": "AI Authored Line %",
+      "visualization": "line",
+      "query_file": "sql/queries/contribution.sql",
+      "metric": "ai_authored_line_pct"
+    },
+    {
+      "name": "Lines by Authorship",
+      "visualization": "stacked_bar",
+      "query_file": "sql/queries/contribution.sql",
+      "metrics": ["ai_authored_lines", "ai_assisted_lines", "human_lines"]
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "name": "AI Coding Value",
+  "description": "价值度：合入率、review 轮次、周期时间、返工和缺陷信号。",
+  "cards": [
+    {
+      "name": "Merge Rate %",
+      "visualization": "line",
+      "query_file": "sql/queries/value.sql",
+      "metric": "merge_rate_pct",
+      "series": "ai_authorship"
+    },
+    {
+      "name": "Average Review Rounds",
+      "visualization": "line",
+      "query_file": "sql/queries/value.sql",
+      "metric": "avg_review_rounds",
+      "series": "ai_authorship"
+    },
+    {
+      "name": "Average Cycle Time Hours",
+      "visualization": "line",
+      "query_file": "sql/queries/value.sql",
+      "metric": "avg_cycle_time_hours",
+      "series": "ai_authorship"
+    },
+    {
+      "name": "Revert Rate %",
+      "visualization": "bar",
+      "query_file": "sql/queries/value.sql",
+      "metric": "revert_rate_pct",
+      "series": "ai_authorship"
+    }
+  ]
+}

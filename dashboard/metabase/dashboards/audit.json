@@ -1,0 +1,24 @@
+{
+  "name": "AI Coding Audit",
+  "description": "审计：启发式准确率、ratio 偏差、待审队列健康度。",
+  "cards": [
+    {
+      "name": "Authorship Accuracy %",
+      "visualization": "line",
+      "query_file": "sql/queries/audit.sql",
+      "metric": "authorship_accuracy_pct"
+    },
+    {
+      "name": "Average Ratio Error",
+      "visualization": "line",
+      "query_file": "sql/queries/audit.sql",
+      "metric": "avg_ratio_abs_error"
+    },
+    {
+      "name": "Audited Count",
+      "visualization": "bar",
+      "query_file": "sql/queries/audit.sql",
+      "metric": "audited_count"
+    }
+  ]
+}

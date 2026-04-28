@@ -1,0 +1,24 @@
+{
+  "name": "AI Coding Coverage",
+  "description": "覆盖度：AI 周活跃、团队覆盖率、AI commit 占比。",
+  "cards": [
+    {
+      "name": "AI Weekly Active Users",
+      "visualization": "line",
+      "query_file": "sql/queries/coverage.sql",
+      "metric": "ai_weekly_active_users"
+    },
+    {
+      "name": "AI User Coverage %",
+      "visualization": "line",
+      "query_file": "sql/queries/coverage.sql",
+      "metric": "ai_user_coverage_pct"
+    },
+    {
+      "name": "AI Commit %",
+      "visualization": "bar",
+      "query_file": "sql/queries/coverage.sql",
+      "metric": "ai_commit_pct"
+    }
+  ]
+}

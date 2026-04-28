@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ "${AI_METRICS_SKIP_POST_COMMIT:-}" == "1" ]]; then
+  exit 0
+fi
+
+HOOK_DIR="$(cd "$(dirname "$0")" && pwd)"
+LIB_DIR="${HOOK_DIR}/ai-metrics-lib"
+
+if [[ ! -d "${LIB_DIR}" ]]; then
+  LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/lib" && pwd)"
+fi
+
+source "${LIB_DIR}/trailer.sh"
+
+mode="$(PYTHONPATH="${LIB_DIR}" python - <<'PY'
+from config import load_config
+print(load_config()["authorship"].get("mode", "auto"))
+PY
+)"
+
+if [[ "${mode}" == "manual" ]]; then
+  exit 0
+fi
+
+tmp_msg="$(mktemp)"
+git log -1 --format=%B > "${tmp_msg}"
+
+estimate="$(git show --format=%B --stat --numstat --no-renames HEAD | PYTHONPATH="${LIB_DIR}" python "${LIB_DIR}/heuristic.py" --stdin --format trailer)"
+
+authorship="$(printf "%s\n" "${estimate}" | awk -F': ' '/^AI-Authorship:/ {print $2}')"
+ratio="$(printf "%s\n" "${estimate}" | awk -F': ' '/^Human-Edit-Ratio:/ {print $2}')"
+
+if [[ "${mode}" == "hybrid" ]]; then
+  if [[ -n "${AI_METRICS_CHOICE:-}" ]]; then
+    case "${AI_METRICS_CHOICE}" in
+      ai-authored) authorship="ai-authored"; ratio="${AI_METRICS_RATIO:-20}" ;;
+      ai-assisted) authorship="ai-assisted"; ratio="${AI_METRICS_RATIO:-50}" ;;
+      human) authorship="human"; ratio="${AI_METRICS_RATIO:-100}" ;;
+      *) echo "[ai-metrics] invalid AI_METRICS_CHOICE: ${AI_METRICS_CHOICE}" >&2; exit 1 ;;
+    esac
+  elif [[ -t 0 ]]; then
+    echo "[ai-metrics] heuristic estimate: ${authorship}, Human-Edit-Ratio=${ratio}" >&2
+    echo "[ai-metrics] accept or override: Enter=accept, 1=ai-authored, 2=ai-assisted, 3=human" >&2
+    read -r -p "Choice [Enter/1/2/3]: " choice
+    case "${choice}" in
+      "") ;;
+      1) authorship="ai-authored"; ratio="20" ;;
+      2) authorship="ai-assisted"; ratio="50" ;;
+      3) authorship="human"; ratio="100" ;;
+      *) echo "[ai-metrics] invalid choice" >&2; exit 1 ;;
+    esac
+  fi
+fi
+
+replace_or_append_trailer "${tmp_msg}" "AI-Authorship" "${authorship}"
+replace_or_append_trailer "${tmp_msg}" "Human-Edit-Ratio" "${ratio}"
+replace_or_append_trailer "${tmp_msg}" "AI-Mode" "${mode}"
+replace_or_append_trailer "${tmp_msg}" "Audit-Status" "pending"
+
+AI_METRICS_SKIP_POST_COMMIT=1 git commit --amend -F "${tmp_msg}" >/dev/null
+rm -f "${tmp_msg}"
