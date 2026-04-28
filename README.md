@@ -1,5 +1,7 @@
 # AI Coding Metrics
 
+[中文文档](README.zh-CN.md)
+
 AI Coding Metrics is a GitLab-oriented toolkit for measuring AI coding adoption and outcomes across engineering teams. It provides commit trailers, Git hooks, heuristic authorship estimation, GitLab CI labeling, MySQL ETL jobs, Metabase dashboards, and audit workflows.
 
 This project treats AI metrics as process signals, not individual performance metrics. Team and subgroup trends are the default reporting unit.
